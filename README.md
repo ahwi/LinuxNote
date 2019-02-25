@@ -1,0 +1,2 @@
+# LinuxNote
+linux笔记
