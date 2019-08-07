@@ -24,6 +24,8 @@ TCP/IP协议族是一个四层协议系统，自底而上分别是数据链路�
 
 它们实现了IP地址和机器物理地址之间的互相转换。
 
+网络层使用IP地址寻找一台机器，而数据链路层使用物理地址寻找一台机器。
+
 #### 1.1.2 网络层
 
 网络层实现数据包的选路和转发。
@@ -59,7 +61,7 @@ TCP/IP协议族是一个四层协议系统，自底而上分别是数据链路�
 
   对整个报文（包括头部和内容部分）进行循环冗余校验（Cyclic Redundancy Check, CRC）,以校验报文在传输过程中是否损坏。
 
-需要指出的是，ICMP协议并非严格意义上的网络层协议，因为它使用处于同一层的IP协议提供的服务（一般来说，上层协议是以哦那个下层协议提供的服务）
+需要指出的是，ICMP协议并非严格意义上的网络层协议，因为它使用处于同一层的IP协议提供的服务（一般来说，上层协议是使用下层协议提供的服务）
 
 #### 1.1.3 传输层
 
@@ -77,11 +79,9 @@ TCP/IP协议族是一个四层协议系统，自底而上分别是数据链路�
 
 #### 1.14 应用层
 
-应用层负责处理应用程序的逻辑。数据链路层、网络层和传输层负责处理网络通讯细节，这部分必须即稳定又高兴，因此它们都在内核空间中实现，而应用层则在用户空间实现，因为它负责处理众多逻辑，比如文件传输、名称查询和网络管理。
+应用层负责处理应用程序的逻辑。数据链路层、网络层和传输层负责处理网络通讯细节，这部分必须即稳定又高效，因此它们都在内核空间中实现，而应用层则在用户空间实现，因为它负责处理众多逻辑，比如文件传输、名称查询和网络管理。
 
 我们可以通过查看/etc/services文件查看所有知名的应用层协议，以及它们都能使用哪些传输层服务。
-
-
 
 
 
@@ -1320,6 +1320,18 @@ multi on
 
   Linux提供了一套网络信息API，以实现主机名和IP地址之间的转换，以及服务名称和端口号之间的转换。这些API都定义再netdb.h头文件中。
 
+Linux提供了如下4个函数来完成主机字节序和网络字节序之间的转换：
+
+```C
+#include <netinet/in.h>
+unsigned long int htonl(unsigned long int hostlong);
+unsigned short int htons(unsigned short int hostshort);
+unsigned long int ntohl(unsigned long int netlong);
+unsigned short int ntohs(unsigned short int netshort);
+```
+
+
+
 
 
 ### 5.1 socket地址API
@@ -1373,7 +1385,264 @@ int main(int argc, char argv[])
 
 
 
+#### 5.1.2 通用socket地址
 
+socket网络编程接口中表示socket地址的是结构体sockaddr，定义如下:
+
+```c
+#include <bits/socket.h>
+struct sockaddr
+{
+    sa_family_t sa_family;
+    char sa_data[14];
+}
+```
+
+* sa_family成员是地址族类型（sa_family_t）的变量类型
+
+  地址族类型通常于协议族类型对应。常见的协议族（protocol family，也称domain，见后文）和对应的地址族如表5-1所示：
+
+  ![1562469388490](assets/1562469388490.png)
+
+  宏PF\_\*和AF\_\*都定义在bits/socket.h头文件中，且后者与前者有完全相同的值，所以二者通常混用。
+
+* sa_data成员用于存放socket地址值
+
+  不同的协议族的地址值具有不哦那个的含义和长度，如表5-2所示：
+
+  ![1562469678069](assets/1562469678069.png)
+
+  由表5-2可见，14字节的sa_Data根本无法完全容纳多数协议族的地址值。因此，linux定义了下面这个新的通用socket地址结构体：
+
+  ```c
+  # include <bits/socket.h>
+  struct sockaddr_storage
+  {
+      sa_family_t sa_family;
+      unsigned long int __ss_align;
+      char __ss_padding[128-sizeof(__ss_align)];
+  }
+  ```
+
+
+
+#### 5.1.3 专用socket地址
+
+上面两个通用的socket地址结构体不好用，比如设置与获取IP地址和端口号就需要执行繁琐的位操作。
+
+linux位各个协议族提供了专门的socket地址结构体:
+
+* UNIX本地域协议族使用如下专用socket地址结构体:
+
+  ```c
+  #include <sys/un.h>
+  struct sockaddr_un {
+      __kernel_sa_family_t sun_family; /* 地址族，取AF_UNIX */
+      char sun_path[UNIX_PATH_MAX];   /* 文件全路径名*/
+  };
+  ```
+
+* IPv4
+
+  ```c
+  struct sockaddr_in
+  {
+    	sa_family_t sin_family;   //地址族，取AF_INET
+  	in_port_t sin_port;       //端口号，用网络字节序表示
+      struct in_addr sin_addr;    //IPv4地址结构，用网络字节序表示
+  };
+  
+  
+  struct in_addr
+  {
+      in_addr_t s_addr;  //存放ipv4地址，用网络字节序表示，in_addr_t就是一个无符号的32位整型
+  };
+  ```
+
+* IPv6
+
+  ```C
+  
+  struct sockaddr_in6
+  {
+      sa_family_t sin6_family;   //地址族，取AF_INET6
+      in_port_t sin6_port;        /* 端口号，用网络字节序表示 */
+      uint32_t sin6_flowinfo;     /* IPv6 流信息，设置为0n */
+      struct in6_addr sin6_addr;  /* IPv6 地址 */
+      uint32_t sin6_scope_id;     /* IPv6 id范围 */
+  };
+  
+  struct in6_addr
+  {
+  	unsigned char sa_addr[16];	/*IPv6地址，要用网络字节序表示*/    
+  };
+  ```
+
+  <font color=blue>所有专用socket地址（以及sockaddr_storage）类型的变量在实际使用时都需要转化位通用socket地址类型sockaddr（强制转换即可），因为所有socket编程接口使用的地址参数的类型都是sockaddr。</font>
+
+
+#### 5.1.4 IP地址转换函数
+
+下面3个函数可用于用点分十进制字符表示的IPv4地址和用网络字节序整数表示的IPv4地址之间的转换:
+
+```c
+#include <arpa/inet.h>
+
+in_addr_t inet_addr(const char* strptr);
+/*用于将用点分十进制字符串表示的IPv4地址转换为用网络字节整数表示的IPv4地址。它失败时返回INADDR_NONE*/
+
+int inet_aton(const char* cp, struct in_addr* ip);
+/*完成和inet_addr同样的功能，但是将转换结果存储于参数inp指向的地址结构中。成功时返回1，失败时返回0*/
+
+char * inet_ntoa(struct in_addr in);
+/*将用网络字节序整数表示的IPv4地址转化为用点分十进字符串表示的IPv4地址。需要注意的时，该函数内部用一个静态变量存储转换结果，函数的返回值指向该静态内存，一次inet_ntoa是不可重入的*/
+
+```
+
+下面这对更新的函数也能完成和前面3个函数同样的功能，并且它们同时使用于IPv4地址和IPv6地址:
+
+```c
+#include <arpa/inet.h>
+
+int inet_pton(int af, const char *src, void *dst); 
+ 
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+```
+
+
+
+### 5.2 创建socket
+
+socket系统调用可创建一个socket：
+
+```c
+#include <sys/types.h>
+#include <sys/socket.h>
+
+int socket(int domain, int type, int protocol);
+```
+
+* domain参数高速系统使用哪个底层协议族
+
+  对TCP/IP协议族而言，该参数应该设置为PF_INET(Protocol Family of Internet, 用于IPv4)或PE_INET6(用于IPv6)；对于UNIX本地域协议族而言，该参数应该设置为PE_UNIX。
+
+* type参数指定服务类型
+
+  服务器类型主要由SOCK_STREAM服务（流服务）和SOCK_UGRAM（数据报）服务。对TCP/IP协议族而言，其值取SOCK_STREAM表示传输层使用TCP协议，取SOCK_DGRAM表示传输层使用UDP协议。其他，至内核2.6.17起，type参数可用接收上述类型与下面两个重要的标志相与的值：SOCK_NONBLOCK和SOCK_CLOEXEC。
+
+* protocol参数是在前两个参数构成的协议集合下，再选择一个具体的协议。同参都设置为0，表示使用默认协议。
+
+### 5.3 命令socket
+
+创建socket时，我们给它指定了地址族，但是并未指定使用该地址族中的哪个具体socket地址。<font color=blue>将一个socket与socket地址绑定称为给socket命名</font>。在服务器程序中，我们通常要命名socket，因为只有命名后客户端才能知道如何连接它。客户端则通常不需要命名socket，而是采用匿名方式，即使用操作系统自动分配的socket地址。命名socket的系统调用是bind，其定义如下：
+
+```c
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+bind将my_addr所指的socket地址命名分配给未命名的sockfd文件描述符，addrlen参数指出该socket地址的长度。
+
+bind成功时返回0，失败时则返回-1并设置errno
+
+### 5.4 监听socket
+
+socket被命名之后，还不能马上接收客户连接，我们需要使用如下系统调用来创建一个监听队列以存放待处理的客户连接：
+
+```c
+#include <sys/types.h>          
+#include <sys/socket.h>
+
+int listen(int sockfd, int backlog);
+```
+
+* sockefd参数指定被监听的socket
+
+* backlog参数：提示内核监听队列的最大长度
+
+  监听队列长度如果超过backlog，服务器将不受理新的客户连接，客户端也将收到ECONNREFUSED错误信息。
+
+  自内核2.2之后，它只表示处于完全连接状态的socket的上限，处于半连接状态的socket的上限则由/proc/sys/net/ipv4/tcp_max_sys_backlog内核参数定义。backlog参数的典序值时5
+
+* listen成功时返回0，失败则返回-1并设置errno
+
+例子：编写一个服务器程序，如代码清单5-3所示，研究backlog参数对listen系统调用的实际影响。
+
+```c
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+static bool stop = false;
+
+/*SIGTERM信号的处理函数，触发时结束主程序中的循环*/
+static void handle_term(int sig)
+{
+    stop = true;
+}
+
+int main(int argc, char * argv[])
+{
+    signal(SIGTERM, handle_term);
+
+    if(argc <= 3)
+    {
+        printf("usage: %s ip_address port_number backlog\n",
+                basename(argv[0]));
+        return 1;
+    }
+
+    const char* ip = argv[1];
+    int port = atoi(argv[2]);
+    int backlog = atoi(argv[3]);
+
+    int sock = socket(PF_INET, SOCK_STREAM, 0);
+    assert(sock >= 0);
+
+    /*创建一个IPv4 socket地址*/
+    struct sockaddr_in address;
+    bzero(&address, sizeof(address));
+    address.sin_family = AF_INET;
+    inet_pton(AF_INET, ip, &address.sin_addr);
+    address.sin_port = htons(port);
+
+    int ret = bind(sock, (struct sockaddr*)&address, sizeof(address));
+    assert(ret != -1);
+
+    /*循环等待连接， 直到有SIGTERM信号将它中断*/
+    while(!stop){
+        sleep(1);
+    }
+    
+    /* 关闭socket,见后文*/
+    close(sock);
+    return 0;
+}
+```
+
+该服务器程序接收3个参数:ip地址、端口号和backlog值。我们在Kongming20上运行该服务器程序，并在ernest-laptop上多次执行telnet命令来连接该服务器程序。同时，没使用telnet命令建立一个连接，就执行一次netstat命令来查看服务器上连接的状态。具体操作过程如下：
+
+```
+$./testlisten 192.16.1.109 12345 5 # 监听123456端口，给backlog传递典型值5
+$telnet 192.168.1.109 12345 # 多次执行之
+$netstat -nt | grep 12345 #多次执行之
+```
+
+代码清单5-4是netstat命令某次输出的内容，它显示了这一时刻listen监听队列的内容：
+
+![1562491470200](assets/1562491470200.png)
+
+![1562491487422](assets/1562491487422.png)
+
+可见，在监听队列中，处于ESTABLISHED状态的连接只有6个（backlog值加1），其他的连接都处于SYN_RCVD状态，完整的连接最多有(backlog+1)个，在不同的系统上，运行结果会有些差别，不过监听队列中完整连接的上限通常比backlog值略大。
 
 
 
