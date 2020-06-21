@@ -133,6 +133,77 @@ unix有不同的shell，如Boune shell; Bourne-again shell; C shell等
     </details>
 
 
+## 第4章 文件和目录
+### 4.2 函数stat、fstat、sftatat和lstat
+1. 函数定义：
+```c
+#include <sys/stat.h>
+
+int stat(const char *restrict pathname, struct stat * restrict buf);
+int fstat(int fd, struct stat *buf);
+int lstat(const chat *restrict pathname, struct stat *restrict buf);
+int fstatat(int fd, const char *restrict pathname, struct stat *restrict buf, int flag);
+```
+* stat函数：返回与pathname文件有关的信息结构
+* fstat函数：获得已在描述符fd上打开文件的有关信息
+* lstat函数: 当文件是一个符号链接时，返回该符号链接有关的信息，而不是链接引用的文件的信息
+* fstatat函数：
+    * flag：控制是否跟随一个符号链接，当AT_SYMLINK_NOFOOLLOW标志被设置，不会跟随符号链接；默认跟随
+    * fd: 值为AT_FDCWD,并且pathname参数是一个相对路径名，fstatat会计算相对于当前目录的pathname参数，如果pathname是一个绝对路径，fd参数就会被忽略
+
+2. stat结构体:
+```c
+struct stat{
+    mode_t              st_mode;        /* file type & mode (permissions) */
+    ino_t               st_ino;         /* i-node number (serial number) */
+    dev_t               st_dev;         /* device number (file system) */
+    nlink_t             st_nlink;       /* number of links */
+    uid_t               st_uid;         /* user ID of owner */
+    gid_t               st_gid;         /* group ID of owner */
+    struct timespec     st_atime;       /* time of last access */
+    struct timespec     st_mtime;       /* time of last modification */
+    struct timespec     st_ctime;       /* time of last file status change */
+    blksize_t           st_blksize;     /* best I/O block size */
+    blkcnt_t            st_blocks;      /* number of disk blocks allocated */
+};
+```
+
+### 4.3 文件类型
+**1. 文件类型**
+* 普通文件(regular file)
+* 目录文件(directory file)
+* 块特殊文件(block special file)
+    * 提供对设备（如磁盘）带缓冲的访问，每次访问以固定长度为单位进行
+* 字符特殊文件(character special file)
+    * 提供对设备不带缓冲的访问，每次访问长度可变 
+* FIFO
+    * 用于进程间通信，也称为命名管道（named pipe）
+* 套接字(socket)
+    * 进程间的网络通信
+    * 一台宿主机上进程之间的非网络通信
+* 符号链接(symbolic link)
+
+**2. 文件类型宏** 
+
+用来判断文件是什么类型的宏
+
+**3. IPC类型宏**
+
+用来判断ipc是什么类型的宏
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 备注
 编译
