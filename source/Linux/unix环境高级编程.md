@@ -273,6 +273,26 @@ mode 参数:
 * 在标准I/O库方面，flush（冲洗）意味着将缓冲区中的内容写到磁盘上
 * 在终端驱动程序方面，flush（刷清）表示丢弃已存储在缓冲区中的数据
 
+### 5.5 打开流
+
+下列3个函数打开一个标准I/O流
+
+```c
+#include <stdio.h>
+FILE *fopen(const char *restrict pathname, const char *restrict type);
+FILE *freopen(const char *restrict pathname, const char *restrict type, FILE *restrict fp);
+FILE *fdopen(int fd, const char *type);
+```
+
+关闭流
+
+```c
+#include <stdio.h>
+int fclose(FILE *fp);
+```
+
+
+
 
 
 
