@@ -282,7 +282,6 @@ mode 参数:
 * 在标准I/O库方面，flush（冲洗）意味着将缓冲区中的内容写到磁盘上
 * 在终端驱动程序方面，flush（刷清）表示丢弃已存储在缓冲区中的数据
 
-<<<<<<< HEAD
 ### 5.5 打开流
 
 下列3个函数打开一个标准I/O流
@@ -303,12 +302,11 @@ int fclose(FILE *fp);
 
 
 
-=======
 ISO C要求下列缓冲特征：
 * 当且仅当标准输入和标准输出并不指向交互式设备时，它们才是全缓冲的
-* 标准错误绝不会时全缓冲的
+* 标准错误绝不会是全缓冲的
 
-很多系统默认使用虾类类型的缓冲
+很多系统默认使用下类类型的缓冲
 * 标准错误是不带缓冲的
 * 若是指向终端设备的流，则是行缓冲的；否则是全缓冲的
 
@@ -325,8 +323,139 @@ int setvbuf(FILE *restrict fp, char *restrict buf, int mode, size_t size);
 int fflush(FILE *fp);
 ```
 该函数使流所有未写的数据都被传送至内核。若fp是NULL，则此函数将导致所有输出流被冲洗至内核。若fp是NULL，则此函数将导致所有输出流被冲洗。
->>>>>>> eb90fe709f542dc1de83b7ebb4355c03d89885e0
 
+### 5.6 读和写流
+一旦打开了流，则可在3中不同类型的非格式化I/O中进行选择，对其进行读、写操作：
+* 每次一个字符的I/O
+
+    一次读或写一个字符，如果流是带缓冲的，则标准I/O函数处理所有缓冲
+* 每次一行的I/O
+    
+    如果想要一次读或写一行，则使用fgets和fputs。每行都以一个换行符终止。
+    
+* 直接I/O
+    
+    fread和fwrite函数支持这种类型的I/O。每次I/O操作读或写某种数量的对象，而每个对象具有指定的长度。
+
+**1. 输入函数**
+
+以下3个函数可用于一次读一个字符
+```c
+#include <stdio.h>
+int getc(FILE *fp);
+int fgetc(FILE *fp);
+int getchar(void);
+```
+
+大部分实现中，为每个流在FILE对象中维护了两个标志：
+* 出错标志
+* 文件结束标志
+
+```c
+#include <stdio.h>
+
+// 用来判断是出错还是到达文件位端的两个函数
+int ferror(FILE *fp);
+int feof(FILE *fp);
+
+//清除FILE对象中的两个标志：出错标志和文件结束标志
+void clearerr(FILE *fp);
+```
+
+```c
+#include <stdio.h>
+
+//将字符压送回流中
+int ungetc(int c, FILE *fp);
+```
+
+**2. 输出函数**
+
+每次输出一个字符的函数:
+```c
+#include <stdio.h>
+
+int putc(int c, FILE *fp);
+int fputc(int c, FILE *fp);
+int putchar(int c);
+```
+
+### 5.7 每次一行I/O
+下面两个函数提供每次输入一行的功能
+```c
+#include <stdio.h>
+
+char *fgets(char *restrict buf, int n, FILE *restrict fp);
+char *gets(char *buf);
+```
+
+提供每次输出一行的函数
+```c
+#include <stdio.h>
+
+int fputs(const char *restrict str, FILE *restrict fp);
+int puts(char  *str);
+```
+
+### 5.8 标准I/O的效率
+用getc和putc将标准输入复制到标准输出
+<details>
+  <summary>代码</summary>
+
+```c
+#include "apue.h" 
+
+#define BUFFSIZE 4096 
+ 
+int main(void) 
+{ 
+    int c;
+
+    while ((c = getc(stdin)) != EOF)
+        if (putc(c, stdout) == EOF)
+            err_sys("output error");
+
+    if (ferror(stdin))
+        err_sys("input error");
+ 
+    exit(0); 
+    return 1; 
+} 
+
+```
+
+</details>
+用fgets和fputs将标准输入复制到标准输出
+<details>
+  <summary>代码</summary>
+
+```c
+#include "apue.h" 
+
+#define BUFFSIZE 4096 
+ 
+int main(void) 
+{ 
+    char buf[MAXLINE];
+
+    while (fgets(buf, MAXLINE, stdin) != NULL)
+        if (fputs(buf, stdout) == EOF)
+            err_sys("output error");
+
+    if (ferror(stdin))
+        err_sys("input error");
+ 
+    exit(0); 
+    return 1; 
+} 
+
+```
+
+</details>
+
+效率的对比（详细看书P124）
+
+**系统调用与普通的函数调用相比需要花费更多的时间**
 
 
 ## 备注
