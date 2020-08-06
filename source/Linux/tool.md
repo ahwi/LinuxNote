@@ -28,17 +28,61 @@ $ cat /var/log/cron
 
 
 
-
-
-
-
 ### 参考:
 
 <https://mp.weixin.qq.com/s/C48hmXSdGPwUBPDkhlrjQQ>
 
 
 
+## sftp搭建
 
+参考路径
+
+https://tecadmin.net/create-sftp-only-user-centos/ 安装
+https://www.poftut.com/what-is-default-sftp-port-and-how-to-change-sftp-port-number/ 修改端口号
+
+* 创建用户
+
+  ```
+  sudo adduser --shell /bin/false sftpuser
+  sudo passwd sftpuser
+  ```
+
+* 创建目录
+
+  ```
+  sudo mkdir -p /var/sftp/files
+  sudo chown sftpuser:sftpuser /var/sftp/files
+  sudo chown root:root /var/sftp
+  sudo chmod 755 /var/sftp
+  ```
+
+* 配置ssh
+
+  ```
+  $ sudo vim /etc/ssh/sshd_config
+  Match User sftpuser
+  	ForceCommand internal-sftp
+  	PasswordAuthentication yes
+  	ChrootDirectory /var/sftp
+  	PermitTunnel no
+  	AllowAgentForwarding no
+  	AllowTcpForwarding no
+  	X11Forwarding no
+  ```
+
+* 重启ssh服务
+
+  ```
+  sudo systemctl restart sshd.service
+  ```
+
+* 如果权限有问题，可能需要修改权限
+
+  ```
+  如果出现连接出错，修改权限
+  vi /etc/pam.d/sshd
+  ```
 
 
 
