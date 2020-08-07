@@ -489,13 +489,70 @@ size_t fwrite(const void *restrict ptr, size_t size, size_t nobj, FILE *restrict
 
   假定文件的位置可以存放在一个长整型中
 
+  ```c
+  #include <stdio.h>
+  long ftell(FILE *fp);
+  int fseek(FILE *fp, long offset, int whence);
+  void rewind(FILE *fp);
+  ```
+
+  * 对于一个二进制文件，其文件位置指示器是从文件起始位置开始度量，并以字节为度量单位的。
+  * 为了定位一个文本文件，whence一定要是SEEK_SET，而且offset只能有两种值：0（后退到文件的起始位置），或是对该文件的ftell所返回的值。使用rewind函数也可将一个流设置到文件的起始位置。
+
 * `ftello`和`fseeko`函数
 
   Single UNIX Specification引入，使用off_t数据类型代替了长整型
 
+  处理偏移量类型以外，ftello函数和ftell相同，fseeko函数与fseek相同
+
+  ```c
+  #include <stdio.h>
+  off_t ftello(FILE *fp);
+  
+  int fseeko(FILE *fp, off_t offset, int whence);
+  ```
+
 * `fgetpos`和`fsetpos`函数
 
-  ISO C引入，使用一个抽象数据类型fpos_t记录文件的位置。这种数据类型可以根据需要定义一个足够大的数，用以记录文件位置。
+  ISO C引入，使用一个抽象数据类型fpos_t记录文件的位置。这种数据类型可以根据需要定义一个足够大的数，用以记录文件位置。需要移植到非unix系统应使用fgetpos和fsetpos
+
+  ```c
+  #include <stdio.h>
+  
+  int fgetpos(FILE *restrict fp, fpos_t *restrict pos);
+  int fsetpos(FILE *fp, const fpos_t *pos);
+  ```
+
+
+
+### 5.11 格式化I/O
+
+**1. 格式化输出**
+
+* 5个printf函数和printf函数族的变体
+
+**2. 格式化输入**
+
+* 3个scanf函数和scanf函数族的变体
+
+### 5.12 实现细节
+
+每个标准I/O流都有一个与其相关联的文件描述符，可对一个流调用fileno函数以获得其描述符
+
+```c
+#include <stdio.h>
+int fileno(FILE *fp);
+```
+
+如果要调用dup或fcntl等函数，则需要此函数。
+
+实例： 
+
+图5-11程序：为3个标准流以及一个与普通文件相关联的流 打印有关缓冲的转态信息，并对比标准输入、输出连接到终端或者普通文件时，有何不同
+
+```c
+
+```
 
 
 
