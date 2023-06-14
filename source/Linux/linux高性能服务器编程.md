@@ -1782,6 +1782,22 @@ $netstat -nt | grep 12345 #多次执行之
 
 可见，在监听队列中，处于ESTABLISHED状态的连接只有6个（backlog值加1），其他的连接都处于SYN_RCVD状态，完整的连接最多有(backlog+1)个，在不同的系统上，运行结果会有些差别，不过监听队列中完整连接的上限通常比backlog值略大。
 
+### 5.5 接受连接
+
+下面的系统调用从listen监听队列中接受一个连接：
+
+```c++
+#include <sys/types.h>
+#liclude <sys/socket.h>
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+
+
+
+
+
+
 
 
 ## 第13章 多进程编程
